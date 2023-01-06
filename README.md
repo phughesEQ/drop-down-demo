@@ -1,8 +1,47 @@
 # Welcome to your CDK TypeScript project
 
-This is a blank project for CDK development with TypeScript.
+## Running Locally
 
-The `cdk.json` file tells the CDK Toolkit how to execute your app.
+export AWS credentials
+ 
+Start docker with the following commands
+```shell
+$ docker run -p 8000:8000 amazon/dynamodb-local
+```
+
+Create a table for the dynamoDB
+```shell 
+$ aws dynamodb create-table --cli-input-json file://src/dynamoDB/integrationConfig.json --endpoint-url http://localhost:8000
+```
+                               
+Verify the table has been created 
+```shell 
+$ aws dynamodb list-tables --endpoint-url http://localhost:8000
+```
+
+Expected output
+```json
+{
+    "TableNames": [
+        "INTEGRATION_CONFIG"
+    ]
+}
+```
+
+Synth Lambda
+```shell
+$ CDK synth
+```
+
+Invoke Lambda 
+```shell
+$ sam local invoke -t cdk.out/drop-down-demo.template.json readHandler-function
+```
+
+Invoke Lambda
+```shell
+$ sam local invoke -t cdk.out/drop-down-demo.template.json putHandler-function -e exampleEvents/putEvent.json
+```
 
 ## Useful commands
 
