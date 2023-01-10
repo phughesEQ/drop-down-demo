@@ -72,27 +72,18 @@ export class LambdaStack extends Stack {
         const lambdaSub = new LambdaSubscription(listenerLambda)
         topic.addSubscription(lambdaSub)
 
-        const lambdaNames = ['leadCloudHandler']
+        const lambdaNames = ['leadCloudHandler', 'stateFarmHandler']
 
         lambdaNames.map(name => {
             const lambdaProps = getFunctionProps(`integrationHandler/${name}`, context);
             const lambda: NodejsFunction = new NodejsFunction(this, `${name}-function`, lambdaProps);
 
-            const param = {name: lambda.functionName, URL: lambda.functionArn}
-
-            const paramStore = new StringParameter(this, `${name}-parameter`, {
-                parameterName: `/drop-down-demo/${name}`,
-                stringValue: JSON.stringify(param)
-            })
-
-            paramStore.grantRead(listenerLambda)
-
             const rule = new Rule(this, `${name}-rule`, {
                 eventPattern: {
-                    "source": ["aws.ssm"],
                     "detailType": [
-                        "Parameter Store Create"
+                        "Parameter Store Change"
                     ],
+                    "source": ["aws.ssm"],
                     "detail": {
                         "name": [
                             "drop-down-demo",
@@ -107,6 +98,15 @@ export class LambdaStack extends Stack {
             })
 
             rule.addTarget(new targets.SnsTopic(topic))
+
+            const param = {name: lambda.functionName, URL: lambda.functionArn}
+
+            const paramStore = new StringParameter(this, `${name}-parameter`, {
+                parameterName: `/drop-down-demo/${name}`,
+                stringValue: JSON.stringify(param)
+            })
+
+            paramStore.grantRead(listenerLambda)
         })
 
         // CFN outputs
