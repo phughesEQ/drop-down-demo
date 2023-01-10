@@ -1,5 +1,6 @@
 import {DynamoDBClient, PutItemCommand, ScanCommand} from "@aws-sdk/client-dynamodb";
-import {PutEventType} from "../events/types";
+import {configType} from "../events/types";
+import {cleanFunctionName, getRandomVertical} from "../utils/EventUtils";
 
 const client = new DynamoDBClient({region: "us-east-1"});
 
@@ -22,15 +23,14 @@ export const getAllItems = async (tableName: string) => {
     }
 };
 
-export const putItem = async (tableName: String, item: PutEventType) => {
+export const putItem = async (tableName: String, item) => {
     try {
         const params = {
             Item: {
                 itemId: {S: `${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 8)}`},
                 URL: {S: item.URL},
-                vertical: {S: item.vertical},
-                partner: {S: item.partner},
-                attributes: {S: item.attributes.toString()}
+                vertical: {S: getRandomVertical()},
+                partner: {S: cleanFunctionName(item.name.toString())}
             },
             TableName: tableName
         };

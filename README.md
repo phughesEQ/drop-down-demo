@@ -38,11 +38,6 @@ Invoke Lambda
 $ sam local invoke -t cdk.out/drop-down-demo.template.json readHandler-function
 ```
 
-Invoke Lambda
-```shell
-$ sam local invoke -t cdk.out/drop-down-demo.template.json putHandler-function -e exampleEvents/putEvent.json
-```
-
 ## Useful commands
 
 * `npm run build`   compile typescript to js
