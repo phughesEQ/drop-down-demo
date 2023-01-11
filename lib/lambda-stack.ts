@@ -92,7 +92,12 @@ export class LambdaStack extends Stack {
             targets: [new targets.SnsTopic(topic)]
         })
 
-        const lambdaNames = ['leadCloudHandler', 'stateFarmHandler', 'farmersHandler']
+        const lambdaNames = [
+            'leadCloudHandler',
+            'stateFarmHandler',
+            'farmersHandler',
+            'libertyMutualHandler'
+        ]
 
         // Create integration lambdas and parameter stores for each integration lambda
         lambdaNames.map(name => {
