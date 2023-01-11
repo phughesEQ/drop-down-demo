@@ -4,13 +4,14 @@ import {CDKContext} from "./types/types";
 import {getFunctionProps} from "./util/lambda-config";
 import {NodejsFunction} from "aws-cdk-lib/aws-lambda-nodejs";
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
+import {LambdaIntegration} from 'aws-cdk-lib/aws-apigateway';
 import {AttributeType, Table} from "aws-cdk-lib/aws-dynamodb";
-import {LambdaIntegration} from "aws-cdk-lib/aws-apigateway";
-import {StringParameter} from "aws-cdk-lib/aws-ssm";
 import {Topic} from "aws-cdk-lib/aws-sns";
 import {LambdaSubscription} from "aws-cdk-lib/aws-sns-subscriptions";
-import {EventBus, Rule} from "aws-cdk-lib/aws-events";
+import {Rule} from "aws-cdk-lib/aws-events";
 import * as targets from 'aws-cdk-lib/aws-events-targets';
+import {Effect, PolicyStatement, Role, ServicePrincipal} from "aws-cdk-lib/aws-iam";
+import {StringParameter} from "aws-cdk-lib/aws-ssm";
 
 export class LambdaStack extends Stack {
 
@@ -45,6 +46,12 @@ export class LambdaStack extends Stack {
         const readLambda: NodejsFunction = new NodejsFunction(this, "readHandler-function", readFunctionProps);
         const listenerLambda: NodejsFunction = new NodejsFunction(this, "listenerHandler-function", listenerFunctionProps);
 
+        // Allow lister lambda to read from Parameter Store
+        listenerLambda.addToRolePolicy(new PolicyStatement({
+            actions: ['ssm:GetParameters', "ssm:GetParameter"],
+            resources: ["arn:aws:ssm:*"]
+        }))
+
         // Add permissions to lambdas to read and write to dynamo
         dynamoTable.grantReadData(readLambda);
         dynamoTable.grantWriteData(listenerLambda);
@@ -72,41 +79,32 @@ export class LambdaStack extends Stack {
         const lambdaSub = new LambdaSubscription(listenerLambda)
         topic.addSubscription(lambdaSub)
 
-        const lambdaNames = ['leadCloudHandler', 'stateFarmHandler']
+        // Create rule to update new integrations
+        new Rule(this, "drop-down-rule", {
+            eventPattern: {
+                "detailType": ["Parameter Store Change"],
+                "source": ["aws.ssm"],
+                "detail": {
+                    "name": [{"prefix": "/drop-down-demo/"}],
+                    "operation": ["Create", "Update"]
+                }
+            },
+            targets: [new targets.SnsTopic(topic)]
+        })
 
+        const lambdaNames = ['leadCloudHandler', 'stateFarmHandler', 'farmersHandler']
+
+        // Create integration lambdas and parameter stores for each integration lambda
         lambdaNames.map(name => {
             const lambdaProps = getFunctionProps(`integrationHandler/${name}`, context);
             const lambda: NodejsFunction = new NodejsFunction(this, `${name}-function`, lambdaProps);
 
-            const rule = new Rule(this, `${name}-rule`, {
-                eventPattern: {
-                    "detailType": [
-                        "Parameter Store Change"
-                    ],
-                    "source": ["aws.ssm"],
-                    "detail": {
-                        "name": [
-                            "drop-down-demo",
-                            `/drop-down-demo/${name}`
-                        ],
-                        "operation": [
-                            "Create",
-                            "Update"
-                        ]
-                    }
-                },
-            })
-
-            rule.addTarget(new targets.SnsTopic(topic))
-
             const param = {name: lambda.functionName, URL: lambda.functionArn}
 
-            const paramStore = new StringParameter(this, `${name}-parameter`, {
+            new StringParameter(this, `${name}-parameter`, {
                 parameterName: `/drop-down-demo/${name}`,
                 stringValue: JSON.stringify(param)
             })
-
-            paramStore.grantRead(listenerLambda)
         })
 
         // CFN outputs

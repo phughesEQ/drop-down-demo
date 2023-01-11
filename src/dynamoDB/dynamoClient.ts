@@ -27,8 +27,7 @@ export const putItem = async (tableName: String, item) => {
     try {
         const params = {
             Item: {
-                itemId: {S: `${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 8)}`},
-                URL: {S: item.URL},
+                itemId: {S: item.URL},
                 vertical: {S: getRandomVertical()},
                 partner: {S: cleanFunctionName(item.name.toString())}
             },
