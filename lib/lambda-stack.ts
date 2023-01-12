@@ -96,7 +96,8 @@ export class LambdaStack extends Stack {
             'leadCloudHandler',
             'stateFarmHandler',
             'farmersHandler',
-            'libertyMutualHandler'
+            'libertyMutualHandler',
+            'allstateHandler'
         ]
 
         // Create integration lambdas and parameter stores for each integration lambda
